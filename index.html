@@ -3,1237 +3,490 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>MetaWing · YOLO26 Butterfly Predictor</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <title>MetaWing · Butterfly Predictor</title>
+    <meta name="description" content="Upload a caterpillar image. YOLO26 reveals the butterfly." />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
-      *,
-      *::before,
-      *::after {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
       :root {
-        --bg: #080a0c;
-        --bg2: #101318;
-        --panel: #131821;
-        --card: rgba(255, 255, 255, 0.055);
-        --border: rgba(255, 255, 255, 0.1);
-        --glass: rgba(255, 255, 255, 0.035);
-        --green: #34d399;
-        --green2: #10b981;
-        --green-glow: rgba(52, 211, 153, 0.24);
-        --lime: #bef264;
-        --red: #fb7185;
-        --amber: #fbbf24;
-        --blue: #60a5fa;
-        --purple: #c084fc;
-        --orange: #fb923c;
-        --txt: #f4f4f5;
-        --txt2: #b6bcc6;
-        --txt3: #7d8591;
-        --radius: 8px;
-        --radius-sm: 6px;
-        --font: "Geist", "Geist Sans", system-ui, -apple-system, sans-serif;
-        --mono: "Geist Mono", "GeistMono", ui-monospace, SFMono-Regular, Consolas, monospace;
-        --pixel: "Geist Pixel Square", "Geist Pixel Grid", "Geist Pixel Circle", "Geist Pixel Triangle", "Geist Pixel Line", var(--mono);
+        --bg:      #07080b;
+        --bg2:     #0d1016;
+        --border:  rgba(255,255,255,0.08);
+        --card:    rgba(255,255,255,0.04);
+        --green:   #34d399;
+        --green2:  #10b981;
+        --lime:    #bef264;
+        --glow:    rgba(52,211,153,0.18);
+        --txt:     #eef0f3;
+        --txt2:    #8b9199;
+        --txt3:    #4a5260;
+        --r:       10px;
+        --font:    "Geist", system-ui, sans-serif;
+        --mono:    "Geist Mono", monospace;
       }
-      html {
-        scroll-behavior: smooth;
-      }
+
+      html { scroll-behavior: smooth; }
+
       body {
         font-family: var(--font);
-        background:
-          linear-gradient(180deg, rgba(96, 165, 250, 0.06), transparent 340px),
-          linear-gradient(90deg, rgba(52, 211, 153, 0.04), transparent 42%),
-          var(--bg);
+        background: var(--bg);
         color: var(--txt);
         min-height: 100vh;
         overflow-x: hidden;
-        line-height: 1.6;
+        display: flex;
+        flex-direction: column;
       }
+      main { flex: 1; }
+
+      /* subtle grid */
       body::before {
         content: "";
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
+        position: fixed; inset: 0; z-index: 0; pointer-events: none;
         background-image:
-          linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
-        background-size: 38px 38px;
-        mask-image: linear-gradient(to bottom, black, transparent 72%);
-      }
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 24px;
-        position: relative;
-        z-index: 1;
+          linear-gradient(rgba(255,255,255,0.019) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.019) 1px, transparent 1px);
+        background-size: 44px 44px;
+        mask-image: linear-gradient(to bottom, black 0%, transparent 60%);
       }
 
+      .container { max-width: 980px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+      /* ─── Nav ─── */
       nav {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background: rgba(7, 11, 20, 0.72);
-        backdrop-filter: blur(20px);
+        position: sticky; top: 0; z-index: 100;
+        background: rgba(7,8,11,0.8);
+        backdrop-filter: blur(18px);
         border-bottom: 1px solid var(--border);
         padding: 0 24px;
       }
       nav .inner {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 64px;
+        max-width: 980px; margin: 0 auto;
+        display: flex; align-items: center; justify-content: space-between; height: 58px;
       }
-      nav .logo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 800;
-        font-size: 1.25rem;
-        letter-spacing: -0.5px;
-        color: #fff;
-        text-decoration: none;
+      .logo {
+        display: flex; align-items: center; gap: 9px;
+        font-weight: 800; font-size: 1.1rem; letter-spacing: -0.3px;
+        color: #fff; text-decoration: none;
       }
-      nav .logo span {
-        background: linear-gradient(135deg, var(--green), var(--lime));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      nav .logo svg {
-        width: 28px;
-        height: 28px;
-        fill: var(--green);
-      }
-      nav .nav-right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      nav .badge {
-        font-size: 0.65rem;
-        padding: 3px 10px;
-        border-radius: 6px;
-        background: var(--green-glow);
-        color: var(--green);
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        font-family: var(--pixel);
+      .logo svg { width: 24px; height: 24px; fill: var(--green); }
+      .logo-text { background: linear-gradient(135deg,var(--green),var(--lime)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .chip {
+        font-family: var(--mono); font-size: 0.6rem; font-weight: 600;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        padding: 3px 9px; border-radius: 5px;
+        background: rgba(52,211,153,0.1); color: var(--green);
       }
       .nav-btn {
-        background: var(--card);
-        border: 1px solid var(--border);
-        color: var(--txt2);
-        font-family: var(--font);
-        font-size: 0.82rem;
-        font-weight: 600;
-        padding: 7px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: 0.3s;
+        background: var(--card); border: 1px solid var(--border);
+        color: var(--txt2); font-family: var(--font); font-size: 0.8rem; font-weight: 600;
+        padding: 6px 14px; border-radius: 7px; cursor: pointer; transition: 0.2s;
       }
-      .nav-btn:hover {
-        border-color: var(--green);
-        color: var(--green);
-      }
+      .nav-btn:hover { border-color: var(--green); color: var(--green); }
 
-      .hero {
-        text-align: center;
-        padding: 50px 0 24px;
-      }
+      /* ─── Hero ─── */
+      .hero { text-align: center; padding: 56px 0 36px; }
       .hero h1 {
-        font-size: clamp(2rem, 5vw, 3.4rem);
-        font-weight: 900;
-        letter-spacing: -1.5px;
-        line-height: 1.15;
-        margin-bottom: 12px;
-      }
-      .hero h1 .gr {
-        background: linear-gradient(135deg, var(--green), var(--lime));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      .hero p {
-        color: var(--txt2);
-        font-size: 1.05rem;
-        max-width: 560px;
-        margin: 0 auto;
-      }
-
-      .crop-selector {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin: 20px 0 8px;
-      }
-      .crop-chip {
-        padding: 6px 16px;
-        border-radius: 40px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--txt2);
-        font-family: var(--font);
-        font-size: 0.82rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: 0.3s;
-      }
-      .crop-chip:hover {
-        border-color: var(--green);
-        color: var(--green);
-      }
-      .crop-chip.active {
-        background: var(--green);
-        color: #fff;
-        border-color: var(--green);
-      }
-
-      .tabs-wrap {
-        display: flex;
-        justify-content: center;
-        margin: 24px 0;
-      }
-      .tabs {
-        display: inline-flex;
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 60px;
-        padding: 5px;
-        gap: 4px;
-      }
-      .tabs button {
-        border: none;
-        background: transparent;
-        color: var(--txt2);
-        font-family: var(--font);
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 10px 20px;
-        border-radius: 54px;
-        cursor: pointer;
-        transition: 0.3s;
-      }
-      .tabs button:hover {
-        color: #fff;
-      }
-      .tabs button.active {
-        background: var(--green);
-        color: #fff;
-        box-shadow: 0 0 24px var(--green-glow);
-      }
-
-      .panel {
-        display: none;
-        animation: fadeUp 0.4s ease;
-      }
-      .panel.active {
-        display: block;
-      }
-      @keyframes fadeUp {
-        from {
-          opacity: 0;
-          transform: translateY(16px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .upload-zone {
-        max-width: 640px;
-        margin: 0 auto;
-        border: 2px dashed var(--border);
-        border-radius: var(--radius);
-        padding: 56px 32px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.35s;
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
-          var(--glass);
-      }
-      .upload-zone:hover,
-      .upload-zone.drag {
-        border-color: var(--green);
-        background: rgba(34, 197, 94, 0.04);
-      }
-      .upload-zone svg {
-        width: 52px;
-        height: 52px;
-        stroke: var(--txt3);
-        margin-bottom: 16px;
-      }
-      .upload-zone:hover svg {
-        stroke: var(--green);
-      }
-      .upload-zone h3 {
-        font-size: 1.15rem;
-        font-weight: 600;
-        margin-bottom: 6px;
-      }
-      .upload-zone p {
-        color: var(--txt3);
-        font-size: 0.88rem;
-      }
-      .upload-zone input {
-        display: none;
-      }
-      .preview-wrap {
-        max-width: 640px;
-        margin: 20px auto 0;
-        display: none;
-        text-align: center;
-      }
-      .preview-wrap img {
-        max-width: 100%;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-      }
-      .scan-buttons {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-top: 20px;
-      }
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-family: var(--font);
-        font-weight: 600;
-        font-size: 0.92rem;
-        padding: 12px 28px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: 0.3s;
-      }
-      .btn-primary {
-        background: var(--green);
-        color: #fff;
-        box-shadow: 0 4px 24px var(--green-glow);
-      }
-      .btn-primary:hover {
-        background: var(--green2);
-        transform: translateY(-2px);
-      }
-      .btn-deep {
-        background: var(--blue);
-        color: #fff;
-        box-shadow: 0 4px 24px rgba(59, 130, 246, 0.25);
-      }
-      .btn-deep:hover {
-        background: #2563eb;
-        transform: translateY(-2px);
-      }
-      .btn-capture {
-        background: var(--orange);
-        color: #fff;
-        box-shadow: 0 4px 24px rgba(249, 115, 22, 0.25);
-      }
-      .btn-capture:hover {
-        background: #ea580c;
-        transform: translateY(-2px);
-      }
-      .btn-outline {
-        background: transparent;
-        border: 1.5px solid var(--border);
-        color: var(--txt);
-      }
-      .btn-outline:hover {
-        border-color: var(--green);
-        color: var(--green);
-      }
-
-      .warning-banner {
-        max-width: 800px;
-        margin: 12px auto;
-        padding: 12px 20px;
-        border-radius: var(--radius-sm);
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        color: var(--amber);
-        font-size: 0.88rem;
-        font-weight: 500;
-        display: none;
-        text-align: center;
-      }
-      .warning-banner.show {
-        display: block;
-      }
-
-      /* ── Capture Tab ── */
-      .capture-container {
-        max-width: 640px;
-        margin: 0 auto;
-        text-align: center;
-      }
-      .capture-video-wrap {
-        position: relative;
-        border-radius: var(--radius);
-        overflow: hidden;
-        border: 1px solid var(--border);
-        background: var(--bg2);
-        aspect-ratio: 4/3;
-      }
-      .capture-video-wrap video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .capture-video-wrap canvas {
-        display: none;
-      }
-      .capture-video-wrap .cam-switch {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: rgba(0, 0, 0, 0.6);
-        border: none;
-        color: #fff;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        font-size: 1.2rem;
-        cursor: pointer;
-        transition: 0.3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .capture-video-wrap .cam-switch:hover {
-        background: rgba(34, 197, 94, 0.5);
-      }
-      .capture-preview {
-        display: none;
-      }
-      .capture-preview img {
-        width: 100%;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-      }
-      .capture-btns {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-top: 20px;
-      }
-      .shutter-btn {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        border: 4px solid #fff;
-        background: transparent;
-        cursor: pointer;
-        position: relative;
-        transition: 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .shutter-btn::after {
-        content: "";
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: #fff;
-        transition: 0.2s;
-      }
-      .shutter-btn:hover::after {
-        background: var(--green);
-      }
-      .shutter-btn:active {
-        transform: scale(0.9);
-      }
-      .shutter-btn:active::after {
-        background: var(--red);
-      }
-      .capture-hint {
-        color: var(--txt3);
-        font-size: 0.82rem;
-        margin-top: 12px;
-      }
-      .camera-error {
-        color: var(--red);
-        text-align: center;
-        padding: 40px 20px;
-        font-size: 0.9rem;
-      }
-      .camera-error svg {
-        width: 48px;
-        height: 48px;
-        stroke: var(--red);
-        margin-bottom: 12px;
-        display: block;
-        margin: 0 auto 12px;
-      }
-
-      /* Camera */
-      .cam-container {
-        display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .cam-feed {
-        flex: 1 1 640px;
-        max-width: 720px;
-        position: relative;
-      }
-      .cam-feed .placeholder,
-      .cam-feed img {
-        width: 100%;
-        aspect-ratio: 16/9;
-        object-fit: cover;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        background: var(--bg2);
-      }
-      .cam-feed .placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: var(--txt3);
-        gap: 12px;
-      }
-      .cam-feed .live-dot {
-        position: absolute;
-        top: 16px;
-        left: 16px;
-        display: none;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 5px 14px;
-        border-radius: 40px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: var(--red);
-      }
-      .cam-feed .live-dot i {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--red);
-        animation: pulse 1s infinite;
-      }
-      .cam-feed .fps-badge {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        display: none;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 5px 12px;
-        border-radius: 40px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        color: var(--green);
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.3;
-        }
-      }
-      .cam-sidebar {
-        flex: 1 1 280px;
-        max-width: 400px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .cam-sidebar .empty-state {
-        text-align: center;
-        color: var(--txt3);
-        padding: 40px 0;
-        font-size: 0.9rem;
-      }
-      .cam-controls {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        flex-wrap: wrap;
-        margin-top: 16px;
-        align-items: center;
-      }
-      .conf-selector {
-        display: flex;
-        gap: 4px;
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 40px;
-        padding: 3px;
-        margin-left: 10px;
-      }
-      .conf-btn {
-        border: none;
-        background: transparent;
-        color: var(--txt3);
-        font-family: var(--font);
-        font-size: 0.75rem;
-        font-weight: 600;
-        padding: 6px 14px;
-        border-radius: 30px;
-        cursor: pointer;
-        transition: 0.3s;
-      }
-      .conf-btn:hover {
-        color: #fff;
-      }
-      .conf-btn.active {
-        background: var(--green);
-        color: #fff;
-      }
-
-      .loader-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 200;
-        background: rgba(7, 11, 20, 0.85);
-        backdrop-filter: blur(8px);
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 24px;
-      }
-      .loader-overlay.show {
-        display: flex;
-      }
-      .spinner {
-        width: 56px;
-        height: 56px;
-        border: 4px solid var(--border);
-        border-top-color: var(--green);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .loader-overlay p {
-        color: var(--txt2);
-        font-size: 1rem;
-        font-weight: 500;
-        animation: fadeInOut 1.5s ease-in-out infinite;
-      }
-      @keyframes fadeInOut {
-        0%,
-        100% {
-          opacity: 0.5;
-        }
-        50% {
-          opacity: 1;
-        }
-      }
-
-      .results {
-        margin: 40px auto;
-        max-width: 1200px;
-        display: none;
-        animation: fadeUp 0.5s ease;
-      }
-      .results.show {
-        display: block;
-      }
-      .results h2 {
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-      .results h2 .count {
-        font-size: 0.82rem;
-        padding: 4px 14px;
-        border-radius: 6px;
-        background: var(--green-glow);
-        color: var(--green);
-        font-weight: 600;
-      }
-      .scan-badge {
-        font-size: 0.72rem;
-        padding: 3px 10px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-family: var(--mono);
-      }
-      .result-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-        gap: 24px;
-        align-items: start;
-      }
-      @media (max-width: 860px) {
-        .result-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      .result-image {
-        position: relative;
-        border-radius: var(--radius);
-        overflow: hidden;
-        border: 1px solid var(--border);
-        background: var(--bg2);
-      }
-      .result-image img {
-        width: 100%;
-        aspect-ratio: 4 / 3;
-        object-fit: cover;
-        display: block;
-      }
-      .result-visuals {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-      }
-      .image-tag {
-        position: absolute;
-        left: 10px;
-        top: 10px;
-        z-index: 1;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 6px;
-        background: rgba(8, 10, 12, 0.72);
-        color: var(--txt);
-        font-family: var(--mono);
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        padding: 4px 7px;
-        text-transform: uppercase;
-      }
-      .result-caption {
-        border-top: 1px solid var(--border);
-        padding: 10px 12px;
-        background: rgba(255, 255, 255, 0.035);
-        color: var(--txt2);
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        font-size: 0.78rem;
-      }
-      .result-caption strong {
-        color: var(--txt);
-      }
-      .det-cards {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        max-height: 80vh;
-        overflow-y: auto;
-        padding-right: 4px;
-      }
-      .det-cards::-webkit-scrollbar {
-        width: 4px;
-      }
-      .det-cards::-webkit-scrollbar-thumb {
-        background: var(--border);
-        border-radius: 4px;
-      }
-
-      .det-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        padding: 16px 18px;
-        transition: 0.3s;
-      }
-      .det-card:hover {
-        border-color: rgba(34, 197, 94, 0.3);
-        background: rgba(34, 197, 94, 0.04);
-      }
-      .det-card .top {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        margin-bottom: 8px;
-      }
-      .det-card .pest-name {
-        font-weight: 700;
-        font-size: 1rem;
-        text-transform: capitalize;
-      }
-      .det-card .pest-count {
-        font-size: 0.76rem;
-        padding: 3px 10px;
-        border-radius: 20px;
-        background: rgba(239, 68, 68, 0.12);
-        color: var(--red);
-        font-weight: 600;
-      }
-      .det-card .conf-bar {
-        height: 4px;
-        border-radius: 4px;
-        background: var(--border);
-        margin-bottom: 8px;
-        overflow: hidden;
-      }
-      .det-card .conf-fill {
-        height: 100%;
-        border-radius: 4px;
-        background: linear-gradient(90deg, var(--green), var(--lime));
-      }
-      .det-card .meta {
-        display: flex;
-        gap: 14px;
-        font-size: 0.78rem;
-        color: var(--txt2);
-        flex-wrap: wrap;
-        margin-bottom: 4px;
-      }
-      .det-card .meta strong {
-        color: var(--txt);
-        font-weight: 600;
-      }
-      .verified-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.68rem;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-weight: 600;
-        margin-left: 6px;
-      }
-      .stability-bar {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.72rem;
-        color: var(--txt3);
-        margin: 6px 0;
-      }
-      .stability-dots {
-        display: flex;
-        gap: 3px;
-      }
-      .stability-dots span {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--border);
-      }
-      .stability-dots span.filled {
-        background: var(--green);
-      }
-      .no-det {
-        text-align: center;
-        color: var(--txt3);
-        padding: 40px 0;
-        font-size: 1rem;
-      }
-      .no-det svg {
-        width: 48px;
-        height: 48px;
-        stroke: var(--txt3);
-        margin-bottom: 12px;
-      }
-
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 300;
-        background: rgba(7, 11, 20, 0.9);
-        backdrop-filter: blur(10px);
-        align-items: center;
-        justify-content: center;
-      }
-      .modal-overlay.show {
-        display: flex;
-      }
-      .modal {
-        background: var(--bg2);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 32px;
-        max-width: 980px;
-        width: 90%;
-        max-height: 85vh;
-        overflow-y: auto;
-      }
-      .modal h2 {
-        font-size: 1.3rem;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .modal-close {
-        background: none;
-        border: none;
-        color: var(--txt3);
-        font-size: 1.5rem;
-        cursor: pointer;
-      }
-      .modal-close:hover {
-        color: var(--red);
-      }
-      .stat-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-      .stat-card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        padding: 16px;
-        text-align: center;
-      }
-      .stat-card .num {
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: var(--green);
-      }
-      .stat-card .label {
-        font-size: 0.75rem;
-        color: var(--txt3);
-        margin-top: 4px;
-      }
-      .history-item {
-        display: grid;
-        grid-template-columns: 220px minmax(0, 1fr) auto;
-        gap: 16px;
-        align-items: center;
-        padding: 12px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: rgba(255, 255, 255, 0.035);
-        margin-bottom: 10px;
-        font-size: 0.88rem;
-      }
-      .history-pair {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      .history-thumb {
-        position: relative;
-        overflow: hidden;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border);
-        background: #0b0f14;
-      }
-      .history-thumb img {
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
-        display: block;
-      }
-      .history-thumb span {
-        position: absolute;
-        left: 6px;
-        bottom: 6px;
-        padding: 2px 5px;
-        border-radius: 4px;
-        background: rgba(8, 10, 12, 0.76);
-        color: var(--txt2);
-        font-family: var(--mono);
-        font-size: 0.58rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-      }
-      .history-item .pest-info {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
-      .history-item .pest-info .name {
-        font-weight: 750;
-        text-transform: capitalize;
-      }
-      .history-item .pest-info .date {
-        color: var(--txt3);
-        font-size: 0.75rem;
-      }
-      .history-actions {
-        text-align: right;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
+        font-size: clamp(1.6rem, 4vw, 2.6rem);
+        font-weight: 900; letter-spacing: -1.4px; line-height: 1.12; margin-bottom: 12px;
         white-space: nowrap;
       }
+      .hero h1 .gr { background: linear-gradient(135deg,var(--green),var(--lime)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .hero p { color: var(--txt2); font-size: 0.97rem; max-width: 420px; margin: 0 auto; }
 
-      footer {
-        text-align: center;
-        padding: 48px 24px 32px;
-        color: var(--txt3);
-        font-size: 0.82rem;
-        border-top: 1px solid var(--border);
-        margin-top: 64px;
+      /* ─── Upload ─── */
+      .upload-zone {
+        max-width: 520px; margin: 0 auto;
+        border: 2px dashed var(--border);
+        border-radius: var(--r); padding: 52px 28px; text-align: center;
+        cursor: pointer; transition: 0.28s;
+        background: rgba(255,255,255,0.025);
+      }
+      .upload-zone:hover, .upload-zone.drag {
+        border-color: var(--green);
+        background: rgba(52,211,153,0.035);
+      }
+      .upload-zone svg { width: 44px; height: 44px; stroke: var(--txt3); margin-bottom: 14px; transition: 0.28s; }
+      .upload-zone:hover svg { stroke: var(--green); }
+      .upload-zone h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 5px; }
+      .upload-zone p  { color: var(--txt3); font-size: 0.82rem; }
+      .upload-zone input { display: none; }
+
+      /* ─── Preview ─── */
+      .preview-wrap { max-width: 520px; margin: 20px auto 0; display: none; text-align: center; }
+      .preview-img-box {
+        border-radius: var(--r); overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--bg2);
+      }
+      .preview-img-box img { width: 100%; max-height: 520px; object-fit: contain; display: block; background: var(--bg2); }
+      .scan-row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+      /* ─── Buttons ─── */
+      .btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-family: var(--font); font-weight: 600; font-size: 0.88rem;
+        padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; transition: 0.22s;
+      }
+      .btn-primary {
+        background: var(--green); color: #fff;
+        box-shadow: 0 4px 20px rgba(52,211,153,0.22);
+      }
+      .btn-primary:hover { background: var(--green2); transform: translateY(-1px); }
+      .btn-ghost {
+        background: transparent; border: 1px solid var(--border); color: var(--txt2);
+      }
+      .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+
+      /* ─── Warning ─── */
+      .warning { display: none; max-width: 560px; margin: 12px auto; padding: 9px 16px;
+        border-radius: 7px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.22);
+        color: #fbbf24; font-size: 0.82rem; text-align: center; }
+      .warning.show { display: block; }
+
+      /* ─── Loader ─── */
+      .loader-overlay {
+        display: none; position: fixed; inset: 0; z-index: 200;
+        background: rgba(7,8,11,0.9); backdrop-filter: blur(10px);
+        align-items: center; justify-content: center; flex-direction: column; gap: 20px;
+      }
+      .loader-overlay.show { display: flex; }
+      .spinner {
+        width: 48px; height: 48px;
+        border: 3px solid var(--border); border-top-color: var(--green);
+        border-radius: 50%; animation: spin 0.7s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .loader-overlay p { color: var(--txt2); font-size: 0.9rem; font-weight: 500; }
+
+      /* ─── Results ─── */
+      .results { display: none; margin: 48px auto; max-width: 980px; animation: rise 0.4s ease; }
+      .results.show { display: block; }
+      @keyframes rise { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+      /* ── Class reveal banner ── */
+      .class-banner {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+        gap: 12px; margin-bottom: 24px;
+        padding: 16px 22px;
+        background: var(--card); border: 1px solid var(--border); border-radius: var(--r);
+      }
+      .class-banner .label-left { display: flex; align-items: center; gap: 12px; }
+      .class-tag {
+        font-family: var(--mono); font-size: 2rem; font-weight: 700;
+        background: linear-gradient(135deg,var(--green),var(--lime));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        line-height: 1;
+      }
+      .class-info { display: flex; flex-direction: column; gap: 2px; }
+      .class-info .title { font-weight: 700; font-size: 0.97rem; }
+      .class-info .sub   { font-size: 0.76rem; color: var(--txt3); font-family: var(--mono); }
+      .conf-pill {
+        font-family: var(--mono); font-size: 0.78rem; font-weight: 600;
+        padding: 5px 14px; border-radius: 20px;
+        background: rgba(52,211,153,0.12); color: var(--green);
+        border: 1px solid rgba(52,211,153,0.2);
       }
 
-      @media (max-width: 640px) {
-        .hero h1 {
-          font-size: 1.8rem;
-        }
-        .tabs button {
-          padding: 8px 14px;
-          font-size: 0.78rem;
-        }
-        .scan-buttons,
-        .capture-btns {
-          flex-direction: column;
-          align-items: center;
-        }
-        .cam-container {
-          flex-direction: column;
-        }
-        .cam-sidebar {
-          max-width: 100%;
-        }
-        .stat-grid {
-          grid-template-columns: 1fr;
-        }
-        .crop-selector {
-          gap: 6px;
-        }
-        .crop-chip {
-          font-size: 0.75rem;
-          padding: 5px 12px;
-        }
-        .cam-controls {
-          flex-direction: column;
-        }
+      /* ── Butterfly result image ── */
+      .result-hero {
+        border-radius: var(--r); overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--bg2);
+        position: relative;
+        margin-bottom: 24px;
+      }
+      .result-hero img {
+        width: 100%; max-height: 520px; object-fit: contain; display: block;
+      }
+      .result-hero .img-label {
+        position: absolute; top: 12px; left: 12px;
+        font-family: var(--mono); font-size: 0.62rem; font-weight: 700;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        padding: 3px 8px; border-radius: 4px;
+        background: rgba(7,8,11,0.76); color: var(--green);
+        border: 1px solid rgba(52,211,153,0.25);
+      }
+      .result-hero.empty {
+        display: flex; align-items: center; justify-content: center;
+        min-height: 200px; color: var(--txt3); font-size: 0.88rem;
+      }
+
+      /* ── Gallery ── */
+      .gallery-head {
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--txt3); font-family: var(--mono);
+        margin-bottom: 12px;
+      }
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+      }
+      @media (max-width: 680px) { .gallery-grid { grid-template-columns: repeat(4, 1fr); } }
+
+      .gal-item {
+        border-radius: 8px; overflow: hidden;
+        border: 1px solid var(--border); background: var(--bg2);
+        cursor: pointer; transition: 0.22s; position: relative;
+        aspect-ratio: 1 / 1;
+      }
+      .gal-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .gal-item .lbl {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        text-align: center; padding: 4px 2px;
+        background: rgba(7,8,11,0.78);
+        font-family: var(--mono); font-size: 0.58rem; font-weight: 700;
+        letter-spacing: 0.1em; color: var(--txt3); text-transform: uppercase;
+        transition: 0.22s;
+      }
+      .gal-item:hover { border-color: rgba(52,211,153,0.4); transform: translateY(-2px); }
+      .gal-item.active {
+        border-color: var(--green);
+        box-shadow: 0 0 0 2px rgba(52,211,153,0.15), 0 6px 20px rgba(52,211,153,0.18);
+      }
+      .gal-item.active .lbl { background: rgba(52,211,153,0.2); color: var(--green); }
+
+      /* ─── History Modal ─── */
+      .modal-overlay {
+        display: none; position: fixed; inset: 0; z-index: 300;
+        background: rgba(7,8,11,0.92); backdrop-filter: blur(12px);
+        align-items: center; justify-content: center;
+      }
+      .modal-overlay.show { display: flex; }
+      .modal {
+        background: var(--bg2); border: 1px solid var(--border);
+        border-radius: var(--r); padding: 26px;
+        max-width: 760px; width: 92%; max-height: 85vh; overflow-y: auto;
+      }
+      .modal-head {
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: 1.05rem; font-weight: 700; margin-bottom: 18px;
+      }
+      .modal-close { background: none; border: none; color: var(--txt3); font-size: 1.3rem; cursor: pointer; transition: 0.2s; }
+      .modal-close:hover { color: #fb7185; }
+      .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 18px; }
+      .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+      .stat-card .n { font-size: 1.5rem; font-weight: 800; color: var(--green); }
+      .stat-card .l { font-size: 0.7rem; color: var(--txt3); margin-top: 2px; }
+      .h-item {
+        display: grid; grid-template-columns: 120px 1fr auto;
+        gap: 12px; align-items: center;
+        padding: 10px; border: 1px solid var(--border);
+        border-radius: 8px; background: rgba(255,255,255,0.025);
+        margin-bottom: 7px; font-size: 0.82rem;
+      }
+      .h-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+      .h-thumb {
+        position: relative; overflow: hidden; border-radius: 6px;
+        border: 1px solid var(--border); background: #0b0f14;
+      }
+      .h-thumb img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+      .h-thumb span {
+        position: absolute; left: 4px; bottom: 4px; padding: 2px 4px;
+        border-radius: 3px; background: rgba(7,8,11,0.8);
+        font-family: var(--mono); font-size: 0.55rem; font-weight: 700; color: var(--txt2);
+      }
+      .h-info { display: flex; flex-direction: column; gap: 3px; }
+      .h-info .name { font-weight: 700; }
+      .h-info .date { color: var(--txt3); font-size: 0.7rem; }
+      .h-action { text-align: right; font-family: var(--mono); font-size: 0.7rem; color: var(--txt2); }
+
+      footer {
+        text-align: center; padding: 18px 24px;
+        color: var(--txt3); font-size: 0.75rem;
+        border-top: 1px solid var(--border);
+        margin-top: auto;
+      }
+      footer .footer-inner {
+        display: inline-flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center;
+      }
+      footer .f-brand {
+        font-weight: 700; font-size: 0.78rem;
+        background: linear-gradient(135deg,var(--green),var(--lime));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      }
+      footer .f-sep { color: var(--border); }
+      footer .f-group {
+        font-family: var(--mono); font-size: 0.68rem; font-weight: 600;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        color: #7c6af7;
+      }
+      footer .f-copy { color: var(--txt3); font-size: 0.72rem; }
+
+      @media (max-width: 560px) {
+        .hero h1 { font-size: 1.7rem; }
+        .scan-row { flex-direction: column; align-items: center; }
+        .stat-row { grid-template-columns: 1fr; }
+        .h-item   { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
+
+    <!-- Nav -->
     <nav>
       <div class="inner">
         <a href="/" class="logo">
-          <!-- Beautiful Butterfly SVG Icon -->
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9.5c.34-1.34 1.15-3.35 3.32-4.88C17.2 3.3 19.5 3 20.5 4c1 .9.5 3-.5 5.5-1.14 2.86-3.5 5-5.5 5.5-.5-1.5-1.5-4-2.5-5.5zM12 9.5c-.34-1.34-1.15-3.35-3.32-4.88C6.8 3.3 4.5 3 3.5 4c-1 .9-.5 3 .5 5.5 1.14 2.86 3.5 5 5.5 5.5.5-1.5 1.5-4 2.5-5.5zM12 12c1.5.5 4 2.5 4.5 4.5.5 2.1-.5 3.5-2 3.5-1.65 0-3.5-2-4.5-4.5-1 .5-2.85 2.5-4.5 2.5-1.5 0-2.5-1.4-2-3.5.5-2 3-4 4.5-4.5zM12 4v16"/>
+            <path d="M12 9.5c.34-1.34 1.15-3.35 3.32-4.88C17.2 3.3 19.5 3 20.5 4c1 .9.5 3-.5 5.5-1.14 2.86-3.5 5-5.5 5.5-.5-1.5-1.5-4-2.5-5.5zM12 9.5c-.34-1.34-1.15-3.35-3.32-4.88C6.8 3.3 4.5 3 3.5 4c-1 .9-.5 3 .5 5.5 1.14 2.86 3.5 5 5.5 5.5.5-1.5 1.5-4 2.5-5.5zM12 12c1.5.5 4 2.5 4.5 4.5.5 2.1-.5 3.5-2 3.5-1.65 0-3.5-2-4.5-4.5-1 .5-2.85 2.5-4.5 2.5-1.5 0-2.5-1.4-2-3.5.5-2 3-4 4.5-4.5z"/>
           </svg>
-          <span>MetaWing AI</span>
+          <span class="logo-text">MetaWing</span>
         </a>
-        <div class="nav-right">
-          <span class="badge">YOLO26 LAB</span>
-          <button class="nav-btn" id="historyBtn">📊 History</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="chip">YOLO26</span>
+          <button class="nav-btn" id="historyBtn">History</button>
         </div>
       </div>
     </nav>
 
+    <main>
+    <!-- Hero -->
     <section class="hero container">
-      <h1>Identify Caterpillars<br /><span class="gr">Predict Butterflies</span></h1>
-      <p>
-        Upload a specimen image. YOLO26 predicts the butterfly result, then saves the generated output into the resalt folder.
-      </p>
+      <h1>Caterpillar → <span class="gr">Butterfly</span></h1>
+      <p>Upload a specimen photo. YOLO26 identifies the class and shows the butterfly result.</p>
     </section>
 
-    
+    <!-- Warning -->
+    <div class="warning container" id="warningBanner"></div>
 
-    <!-- ── Prediction Panel Controls ── -->
-    <div class="tabs-wrap container">
-      <div class="tabs">
-        <button class="active" data-tab="upload">📁 Upload Specimen</button>
-      </div>
-    </div>
-
-    <div class="warning-banner container" id="warningBanner"></div>
-
+    <!-- Upload -->
     <div class="container">
-      <!-- ── Upload Panel ── -->
-      <div id="panel-upload" class="panel active">
-        <div class="upload-zone" id="dropZone">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-            />
-          </svg>
-          <h3>Drop caterpillar photo here</h3>
-          <p>or click to import · Specimen JPG, PNG, WEBP</p>
-          <input type="file" id="fileInput" accept="image/*" />
-        </div>
-        <div class="preview-wrap" id="previewWrap">
+      <div class="upload-zone" id="dropZone">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+        <h3>Drop caterpillar photo here</h3>
+        <p>or click to browse · JPG, PNG, WEBP</p>
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <div class="preview-wrap" id="previewWrap">
+        <div class="preview-img-box">
           <img id="previewImg" src="" alt="Preview" />
-          <div class="scan-buttons">
-            <button class="btn btn-primary" id="analyzeBtn">
-              🦋 YOLO26 Butterfly Prediction
-            </button>
-            <button class="btn btn-outline" id="clearBtn">✕ Reset</button>
-          </div>
         </div>
-        <div style="margin-top: 16px; padding: 12px; background: rgba(168,85,247,0.1); border-radius: 8px; border: 1px solid rgba(168,85,247,0.3);">
-          <span style="display: block; font-size: 0.85rem; font-weight: 600; color: #a1a1aa; margin-bottom: 8px;">Specimen Type / Region (optional)</span>
-          <span style="display: block; font-size: 0.78rem; color: #71717a; margin-bottom: 8px;">Current YOLO26 labels: A, D, F, G, H, I, J</span>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button class="crop-chip active" data-crop="Unknown" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Unknown</button>
-            <button class="crop-chip" data-crop="Milkweed" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Milkweed</button>
-            <button class="crop-chip" data-crop="Citrus Trees" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Citrus</button>
-            <button class="crop-chip" data-crop="Willow" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Willow</button>
-            <button class="crop-chip" data-crop="Thistle" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Thistle</button>
-            <button class="crop-chip" data-crop="Walnut" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #52525b; background: rgba(82,82,90,0.3); color: #d4d4d8; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;">Walnut</button>
-          </div>
+        <div class="scan-row">
+          <button class="btn btn-primary" id="analyzeBtn">🦋 Predict Butterfly</button>
+          <button class="btn btn-ghost" id="clearBtn">✕ Reset</button>
         </div>
       </div>
     </div>
 
-    <!-- Results Section -->
+    <!-- Results -->
     <section class="results container" id="resultsSection">
-      <h2>
-        🦋 Butterfly Transformation Prediction <span class="count" id="resCount"></span>
-        <span class="scan-badge" id="scanType"></span>
-      </h2>
-      <div class="result-grid">
-        <div class="result-visuals">
-          <figure class="result-image">
-            <span class="image-tag">Upload</span>
-            <img id="inputImg" src="" alt="Uploaded caterpillar" />
-            <figcaption class="result-caption">
-              <span>Caterpillar input</span>
-              <strong id="inputLabel">Stored</strong>
-            </figcaption>
-          </figure>
-          <figure class="result-image">
-            <span class="image-tag">Predict</span>
-            <img id="resultImg" src="" alt="Predicted butterfly" />
-            <figcaption class="result-caption">
-              <span>Butterfly result</span>
-              <strong id="resultLabel">YOLO26</strong>
-            </figcaption>
-          </figure>
+
+      <!-- Class banner: label + confidence -->
+      <div class="class-banner" id="classBanner">
+        <div class="label-left">
+          <span class="class-tag" id="classTag">—</span>
+          <div class="class-info">
+            <span class="title" id="classTitle">Awaiting prediction</span>
+            <span class="sub" id="classSub">YOLO26 · best.pt</span>
+          </div>
         </div>
-        <div class="det-cards" id="detCards"></div>
+        <span class="conf-pill" id="confPill">—</span>
       </div>
+
+      <!-- Predicted butterfly image -->
+      <div class="result-hero" id="resultHero">
+        <img id="resultImg" src="" alt="Predicted butterfly" style="display:none;" />
+        <span class="img-label">Predicted Butterfly</span>
+        <div id="resultPlaceholder" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:0.88rem;">Butterfly result will appear here</div>
+      </div>
+
+      <!-- Gallery -->
+      <p class="gallery-head">Reference gallery · Classes A D F G H I J</p>
+      <div class="gallery-grid">
+        <div class="gal-item" id="gal-A" data-label="A">
+          <img src="/resalt/A/A.jpg" alt="Class A" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">A</div>
+        </div>
+        <div class="gal-item" id="gal-D" data-label="D">
+          <img src="/resalt/D/D.jpg" alt="Class D" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">D</div>
+        </div>
+        <div class="gal-item" id="gal-F" data-label="F">
+          <img src="/resalt/F/F.jpg" alt="Class F" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">F</div>
+        </div>
+        <div class="gal-item" id="gal-G" data-label="G">
+          <img src="/resalt/G/G.jpg" alt="Class G" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">G</div>
+        </div>
+        <div class="gal-item" id="gal-H" data-label="H">
+          <img src="/resalt/H/H.jpg" alt="Class H" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">H</div>
+        </div>
+        <div class="gal-item" id="gal-I" data-label="I">
+          <img src="/resalt/I/I.jpg" alt="Class I" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">I</div>
+        </div>
+        <div class="gal-item" id="gal-J" data-label="J">
+          <img src="/resalt/J/J.jpg" alt="Class J" onerror="this.style.opacity='0.2'" />
+          <div class="lbl">J</div>
+        </div>
+      </div>
+
     </section>
 
-    <!-- Loading Overlay -->
+    <!-- Loader -->
     <div class="loader-overlay" id="loader">
       <div class="spinner"></div>
-      <p id="loaderText">Running YOLO26 butterfly prediction...</p>
+      <p id="loaderText">Running YOLO26…</p>
     </div>
 
-    <!-- Lab Records Archive History Modal -->
+    <!-- History Modal -->
     <div class="modal-overlay" id="historyModal">
       <div class="modal">
-        <h2>
-          📊 Taxonomy Records Archive
+        <div class="modal-head">
+          Prediction History
           <button class="modal-close" id="closeHistory">✕</button>
-        </h2>
-        <div class="stat-grid" id="statsGrid"></div>
+        </div>
+        <div class="stat-row" id="statsGrid"></div>
         <div id="historyList"></div>
-        <div style="text-align: center; margin-top: 20px">
-          <button
-            class="btn btn-outline"
-            id="clearHistoryBtn"
-            style="font-size: 0.8rem; padding: 8px 20px"
-          >
-            🗑️ Clear Lab Records
-          </button>
+        <div style="text-align:center;margin-top:16px;">
+          <button class="btn btn-ghost" id="clearHistoryBtn" style="font-size:0.78rem;padding:7px 16px;">🗑 Clear Records</button>
         </div>
       </div>
     </div>
+    </main>
 
     <footer class="container">
-      MetaWing Butterfly Predictor &copy; 2026 · YOLO26 Computer Vision
+      <div class="footer-inner">
+        <span class="f-brand">MetaWing</span>
+        <span class="f-sep">·</span>
+        <span class="f-group">MetaMinds</span>
+        <span class="f-sep">·</span>
+        <span class="f-copy">YOLO26 Butterfly Predictor &copy; 2026</span>
+      </div>
     </footer>
 
     <script>
-      /* ── Caterpillar Selection ────────────────── */
-      let selectedCrop = "Unknown";
-      document.querySelectorAll(".crop-chip").forEach((chip) => {
-        chip.addEventListener("click", () => {
-          document
-            .querySelectorAll(".crop-chip")
-            .forEach((c) => c.classList.remove("active"));
-          chip.classList.add("active");
-          selectedCrop = chip.dataset.crop;
-        });
-      });
-
-      /* ── Tab Switching ─────────────────────────── */
-      document.querySelectorAll(".tabs button").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          document
-            .querySelectorAll(".tabs button")
-            .forEach((b) => b.classList.remove("active"));
-          document
-            .querySelectorAll(".panel")
-            .forEach((p) => p.classList.remove("active"));
-          
-          btn.classList.add("active");
-          
-          // data-tab target match verification hook
-          const activePanelId = "panel-" + btn.dataset.tab;
-          const targetPanel = document.getElementById(activePanelId);
-          if (targetPanel) {
-            targetPanel.classList.add("active");
-          }
-
-          if (btn.dataset.tab !== "capture" && captureStream) {
-            stopCaptureCamera();
-          }
-        });
-      });
-
-      /* ── Upload / Drag-Drop ────────────────────── */
-      const dropZone = document.getElementById("dropZone");
-      const fileInput = document.getElementById("fileInput");
+      /* ─── Upload ─── */
+      const dropZone    = document.getElementById("dropZone");
+      const fileInput   = document.getElementById("fileInput");
       const previewWrap = document.getElementById("previewWrap");
-      const previewImg = document.getElementById("previewImg");
-      let selectedFile = null;
+      const previewImg  = document.getElementById("previewImg");
+      let selectedFile  = null;
 
       dropZone.addEventListener("click", () => fileInput.click());
-      dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.classList.add("drag");
-      });
-      dropZone.addEventListener("dragleave", () =>
-        dropZone.classList.remove("drag"),
-      );
-      dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("drag");
+      dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag"); });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag"));
+      dropZone.addEventListener("drop", e => {
+        e.preventDefault(); dropZone.classList.remove("drag");
         if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
       });
-      fileInput.addEventListener("change", () => {
-        if (fileInput.files.length) handleFile(fileInput.files[0]);
-      });
+      fileInput.addEventListener("change", () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
 
       function handleFile(file) {
         selectedFile = file;
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        const r = new FileReader();
+        r.onload = e => {
           previewImg.src = e.target.result;
           previewWrap.style.display = "block";
           dropZone.style.display = "none";
         };
-        reader.readAsDataURL(file);
+        r.readAsDataURL(file);
       }
 
       document.getElementById("clearBtn").addEventListener("click", () => {
@@ -1243,547 +496,132 @@
         dropZone.style.display = "block";
         document.getElementById("resultsSection").classList.remove("show");
         document.getElementById("warningBanner").classList.remove("show");
+        clearGallery();
       });
 
-      /* ── Helpers ───────────────────────────────── */
-      function escapeHtml(value) {
-        return String(value ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
+      /* ─── Helpers ─── */
+      function esc(v) {
+        return String(v ?? "")
+          .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+          .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       }
 
-      function imageThumb(url, label) {
-        if (!url) {
-          return `<div class="history-thumb"><span>${escapeHtml(label)}</span></div>`;
-        }
-        return `<div class="history-thumb"><img src="${escapeHtml(url)}" alt="${escapeHtml(label)}"><span>${escapeHtml(label)}</span></div>`;
+      function clearGallery() {
+        document.querySelectorAll(".gal-item").forEach(el => el.classList.remove("active"));
       }
 
-      function severityBadge(level) {
-        const map = {
-          low: { bg: "rgba(59,130,246,0.12)", cl: "#3b82f6", icon: "💧" },
-          medium: { bg: "rgba(139,92,246,0.12)", cl: "#8b5cf6", icon: "✨" },
-          high: { bg: "rgba(244,63,94,0.12)", cl: "#f43f5e", icon: "🔥" },
-          unknown: { bg: "rgba(161,161,170,0.12)", cl: "#a1a1aa", icon: "🌀" },
-        };
-        const c = map[level] || map["unknown"];
-        return `<span style="font-size:0.75rem;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.cl};font-weight:600;">${c.icon} Match: ${level}</span>`;
+      function highlightClass(name) {
+        clearGallery();
+        const label = String(name || "").trim().toUpperCase();
+        const el = document.getElementById("gal-" + label);
+        if (el) { el.classList.add("active"); el.scrollIntoView({ behavior:"smooth", block:"nearest" }); }
       }
 
-      function verifiedBadge(status) {
-        const map = {
-          verified: { bg: "rgba(16,185,129,0.15)", cl: "#10b981", txt: "✓ Verified Genus" },
-          "high-confidence": { bg: "rgba(16,185,129,0.15)", cl: "#10b981", txt: "✓ High Match" },
-          stable: { bg: "rgba(3b,132,246,0.15)", cl: "#3b82f6", txt: "✓ Signal Stable" },
-          corrected: { bg: "rgba(251,191,36,0.15)", cl: "#fbbf24", txt: "⚠ Cross Match" },
-          "deep-scan": { bg: "rgba(139,92,246,0.15)", cl: "#a855f7", txt: "Deep YOLO26" },
-          capture: { bg: "rgba(249,115,22,0.15)", cl: "#f97316", txt: "📸 Macro Feed" },
-          live: { bg: "rgba(244,63,94,0.12)", cl: "#f43f5e", txt: "● Optical" },
-          unverified: { bg: "rgba(161,161,170,0.1)", cl: "#a1a1aa", txt: "○ Processing" },
-        };
-        const c = map[status] || map["unverified"];
-        return `<span class="verified-badge" style="background:${c.bg};color:${c.cl};">${c.txt}</span>`;
-      }
-
-      function stabilityDots(framesSeen) {
-        const max = 10,
-          filled = Math.min(framesSeen || 0, max);
-        let dots = "";
-        for (let i = 0; i < max; i++)
-          dots += `<span class="${i < filled ? "filled" : ""}"></span>`;
-        return `<div class="stability-bar"><div class="stability-dots">${dots}</div><span>Structural Match: ${filled}/${max}</span></div>`;
-      }
-
-      function infoRow(icon, label, value, color) {
-        if (!value) return "";
-        return `<div style="display:flex;gap:10px;align-items:start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
-      <span style="font-size:1rem;flex-shrink:0;margin-top:1px;">${icon}</span>
-      <div style="font-size:0.82rem;line-height:1.5;">
-        <span style="color:#71717a;font-weight:600;">${label}</span><br>
-        <span style="color:${color || "#d4d4d8"};font-weight:500;">${value}</span>
-      </div>
-    </div>`;
-      }
-
-      function buildCardHTML(d, showStability) {
-        return `
-    <div class="det-card">
-      <div style="background:rgba(168,85,247,0.2);padding:12px 16px;border-radius:8px;margin-bottom:12px;">
-        <span style="display:block;font-size:0.85rem;color:#a1a1aa;font-weight:600;margin-bottom:4px;">🦋 BUTTERFLY TRANSFORMATION</span>
-        <span style="display:block;font-size:0.95rem;color:#e4e4e7;line-height:1.6;font-weight:500;">${d.quick_action}</span>
-      </div>
-      <div class="top">
-        <div>
-          <span class="pest-name">🐛 ${d.common_name || d.name}</span>
-          ${verifiedBadge(d.verified || "unverified")}
-          <span style="display:block;font-size:0.72rem;color:#71717a;margin-top:2px;font-style:italic;">${d.name}</span>
-          ${d.gemini_note ? `<span style="display:block;font-size:0.72rem;color:#fbbf24;margin-top:4px;">${d.gemini_note}</span>` : ""}
-        </div>
-        <span style="display:flex;gap:8px;align-items:center;">
-          ${severityBadge(d.severity || "unknown")}
-          <span class="caterpillar-count" style="font-weight:700;color:var(--blue)">×${d.count}</span>
-        </span>
-      </div>
-      <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence}%"></div></div>
-      <div class="meta">
-        <span>Classification Confidence: <strong>${d.confidence}%</strong></span>
-        ${d.best_confidence ? `<span>Peak: <strong>${d.best_confidence}%</strong></span>` : ""}
-        ${d.crops_at_risk ? `<span>Region: <strong>${d.crops_at_risk}</strong></span>` : ""}
-      </div>
-      ${showStability && d.frames_seen ? stabilityDots(d.frames_seen) : ""}
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-        ${infoRow("⏳", "CHRYSALIS/PUPAL STAGE", d.damage, "#f43f5e")}
-        ${infoRow("🐛", "CATERPILLAR IDENTIFICATION", d.identify, "#d4d4d8")}
-        ${infoRow("🌿", "HOST PLANTS / DIET", d.chemical, "#10b981")}
-        ${infoRow("🎨", "BUTTERFLY COLOR & APPEARANCE", d.organic, "#a855f7")}
-        ${infoRow("📏", "SIZE, MIGRATION & STATUS", d.prevention, "#3b82f6")}
-      </div>
-    </div>`;
-      }
-
-      /* ── Scan (Upload) ─────────────────────────── */
-      async function runScan(
-        endpoint,
-        loaderMsg,
-        badgeText,
-        badgeColor,
-        formData,
-      ) {
-        const loader = document.getElementById("loader");
-        document.getElementById("loaderText").textContent = loaderMsg;
-        loader.classList.add("show");
-
-        try {
-          const res = await fetch(endpoint, { method: "POST", body: formData });
-          const data = await res.json();
-          loader.classList.remove("show");
-          if (data.error) {
-            alert(data.error);
-            return;
-          }
-
-          const banner = document.getElementById("warningBanner");
-          if (data.warning) {
-            banner.textContent = "⚠️ " + data.warning;
-            banner.classList.add("show");
-          } else {
-            banner.classList.remove("show");
-          }
-
-          const badge = document.getElementById("scanType");
-          badge.textContent = badgeText;
-          badge.style.background = badgeColor.bg;
-          badge.style.color = badgeColor.cl;
-
-          showResults(data);
-        } catch (err) {
-          loader.classList.remove("show");
-          alert("YOLO26 prediction failed: " + err.message);
-        }
-      }
-
+      /* ─── Predict ─── */
       document.getElementById("analyzeBtn").addEventListener("click", () => {
-        if (!selectedFile) return;
+        if (!selectedFile) { alert("Please select an image first."); return; }
         const form = new FormData();
         form.append("image", selectedFile);
-        form.append("crop", selectedCrop);
-        runScan(
-          "/detect",
-          "Running YOLO26 butterfly prediction...",
-          "🦋 YOLO26 Butterfly Prediction",
-          { bg: "rgba(59,130,246,0.15)", cl: "#3b82f6" },
-          form,
-        );
+        form.append("crop", "Unknown");
+
+        const loader = document.getElementById("loader");
+        document.getElementById("loaderText").textContent = "Running YOLO26…";
+        loader.classList.add("show");
+
+        fetch("/detect", { method: "POST", body: form })
+          .then(r => r.json())
+          .then(data => {
+            loader.classList.remove("show");
+            if (data.error) { alert("⚠ " + data.error); return; }
+
+            const banner = document.getElementById("warningBanner");
+            if (data.warning) { banner.textContent = "⚠ " + data.warning; banner.classList.add("show"); }
+            else { banner.classList.remove("show"); }
+
+            showResults(data);
+          })
+          .catch(err => { loader.classList.remove("show"); alert("Prediction failed: " + err.message); });
       });
 
-      function showResults(resultPayload, detectionsArg) {
-        const data =
-          typeof resultPayload === "object"
-            ? resultPayload
-            : { result_image_url: resultPayload, detections: detectionsArg || [] };
-        const detections = data.detections || [];
-        const prediction = detections[0] || {};
-        const inputUrl = data.uploaded_image_url || previewImg.src || "";
-        const outputUrl = data.butterfly_image_url || data.result_image_url || "";
+      function showResults(data) {
+        const dets   = data.detections || [];
+        const pred   = dets[0] || {};
+        const label  = String(pred.name || "").trim().toUpperCase() || "—";
+        const conf   = pred.confidence != null ? pred.confidence + "%" : "—";
+        const imgUrl = data.butterfly_image_url || data.result_image_url || "";
 
-        document.getElementById("inputImg").src = inputUrl;
-        document.getElementById("resultImg").src = outputUrl;
-        document.getElementById("inputLabel").textContent = selectedFile ? selectedFile.name : "Stored";
-        document.getElementById("resultLabel").textContent = prediction.name ? `Class ${prediction.name}` : "YOLO26";
-        const section = document.getElementById("resultsSection");
-        const cards = document.getElementById("detCards");
-        const counter = document.getElementById("resCount");
-        cards.innerHTML = "";
+        /* class banner */
+        document.getElementById("classTag").textContent   = label;
+        document.getElementById("classTitle").textContent = pred.common_name || ("Class " + label);
+        document.getElementById("classSub").textContent   = "YOLO26 · " + (pred.verified === "verified" ? "Verified" : "best.pt");
+        document.getElementById("confPill").textContent   = conf;
 
-        if (!detections.length) {
-          cards.innerHTML = `<div class="no-det">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <p>No YOLO26 prediction returned for this image.</p></div>`;
-          counter.textContent = "0 matches";
+        /* butterfly image */
+        const img  = document.getElementById("resultImg");
+        const ph   = document.getElementById("resultPlaceholder");
+        if (imgUrl) {
+          img.src = imgUrl;
+          img.style.display = "block";
+          ph.style.display  = "none";
         } else {
-          let total = detections.reduce((s, d) => s + d.count, 0);
-          counter.textContent =
-            total + " prediction" + (total > 1 ? "s" : "") + " returned";
-          detections.forEach((d) => {
-            cards.innerHTML += buildCardHTML(d, false);
-          });
+          img.style.display = "none";
+          ph.style.display  = "flex";
         }
+
+        /* gallery highlight */
+        highlightClass(pred.name);
+
+        /* show section */
+        const section = document.getElementById("resultsSection");
         section.classList.add("show");
         section.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 
-      /* ── CAPTURE TAB ── */
-      let captureStream = null;
-      let currentFacingMode = "environment"; 
-      let capturedBase64 = null;
-
-      const captureVideo = document.getElementById("captureVideo");
-      const captureCanvas = document.getElementById("captureCanvas");
-      const captureVideoWrap = document.getElementById("captureVideoWrap");
-      const capturePreview = document.getElementById("capturePreview");
-      const capturedImg = document.getElementById("capturedImg");
-      const captureHint = document.getElementById("captureHint");
-
-      if (captureVideo && captureCanvas && captureVideoWrap && capturePreview && capturedImg && captureHint) {
-        async function startCaptureCamera(facingMode) {
-          if (captureStream) {
-            captureStream.getTracks().forEach((t) => t.stop());
-          }
-
-          try {
-            captureStream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: facingMode,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-              },
-              audio: false,
-            });
-
-            captureVideo.srcObject = captureStream;
-            captureVideo.style.display = "block";
-            captureVideoWrap.style.display = "block";
-            capturePreview.style.display = "none";
-            document.getElementById("captureBtns").style.display = "none";
-            document.getElementById("captureShutterWrap").style.display = "flex";
-            document.getElementById("captureActionBtns").style.display = "none";
-            captureHint.textContent = "Point at specimen segment and isolate frame.";
-
-            currentFacingMode = facingMode;
-          } catch (err) {
-            console.error("Camera error:", err);
-
-            if (facingMode === "environment") {
-              try {
-                captureStream = await navigator.mediaDevices.getUserMedia({
-                  video: {
-                    facingMode: "user",
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                  },
-                  audio: false,
-                });
-                captureVideo.srcObject = captureStream;
-                captureVideo.style.display = "block";
-                captureVideoWrap.style.display = "block";
-                capturePreview.style.display = "none";
-                document.getElementById("captureBtns").style.display = "none";
-                document.getElementById("captureShutterWrap").style.display = "flex";
-                document.getElementById("captureActionBtns").style.display = "none";
-                captureHint.textContent = "Using optical macro tracking overlay.";
-                currentFacingMode = "user";
-                return;
-              } catch (e) {}
-            }
-
-            captureVideoWrap.innerHTML = `
-          <div class="camera-error">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-            </svg>
-            <p><strong>Camera sublink failure or restriction.</strong></p>
-            <p style="margin-top:8px;font-size:0.82rem;color:var(--txt3);">
-              Secure layout requests <strong>HTTPS</strong> permissions.<br>
-              Terminal route: <strong>https://${window.location.hostname}:5000</strong>
-            </p>
-          </div>`;
-            captureHint.textContent = "";
-          }
-        }
-
-        function stopCaptureCamera() {
-          if (captureStream) {
-            captureStream.getTracks().forEach((t) => t.stop());
-            captureStream = null;
-          }
-          captureVideo.srcObject = null;
-          captureVideo.style.display = "block";
-          capturePreview.style.display = "none";
-          document.getElementById("captureBtns").style.display = "flex";
-          document.getElementById("captureShutterWrap").style.display = "none";
-          document.getElementById("captureActionBtns").style.display = "none";
-          captureHint.textContent = "Initialize optical feed matrix to target taxonomy.";
-        }
-
-        const openCaptureBtn = document.getElementById("openCaptureBtn");
-        if (openCaptureBtn) {
-          openCaptureBtn.addEventListener("click", () => {
-            startCaptureCamera("environment");
-          });
-        }
-
-        const switchCamBtn = document.getElementById("switchCamBtn");
-        if (switchCamBtn) {
-          switchCamBtn.addEventListener("click", () => {
-            const newMode = currentFacingMode === "environment" ? "user" : "environment";
-            startCaptureCamera(newMode);
-          });
-        }
-
-        const shutterBtn = document.getElementById("shutterBtn");
-        if (shutterBtn) {
-          shutterBtn.addEventListener("click", () => {
-            if (!captureStream) return;
-
-            captureCanvas.width = captureVideo.videoWidth;
-            captureCanvas.height = captureVideo.videoHeight;
-            const ctx = captureCanvas.getContext("2d");
-
-            if (currentFacingMode === "user") {
-              ctx.translate(captureCanvas.width, 0);
-              ctx.scale(-1, 1);
-            }
-
-            ctx.drawImage(captureVideo, 0, 0);
-            capturedBase64 = captureCanvas.toDataURL("image/jpeg", 0.92);
-            capturedImg.src = capturedBase64;
-
-            captureVideo.style.display = "none";
-            capturePreview.style.display = "block";
-            document.getElementById("captureShutterWrap").style.display = "none";
-            document.getElementById("captureActionBtns").style.display = "flex";
-            captureHint.textContent = "Image frame frozen. Ready for YOLO26 prediction.";
-
-            if (captureStream) {
-              captureStream.getTracks().forEach((t) => t.stop());
-              captureStream = null;
-            }
-          });
-        }
-
-        const captureRetakeBtn = document.getElementById("captureRetakeBtn");
-        if (captureRetakeBtn) {
-          captureRetakeBtn.addEventListener("click", () => {
-            capturedBase64 = null;
-            startCaptureCamera(currentFacingMode);
-          });
-        }
-
-        const captureScanBtn = document.getElementById("captureScanBtn");
-        if (captureScanBtn) {
-          captureScanBtn.addEventListener("click", async () => {
-            if (!capturedBase64) return;
-            const loader = document.getElementById("loader");
-            document.getElementById("loaderText").textContent = "Running YOLO26 butterfly prediction...";
-            loader.classList.add("show");
-
-            try {
-              const res = await fetch("/detect_capture", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  image: capturedBase64,
-                  crop: selectedCrop,
-                }),
-              });
-              const data = await res.json();
-              loader.classList.remove("show");
-              if (data.error) {
-                alert(data.error);
-                return;
-              }
-
-              const banner = document.getElementById("warningBanner");
-              if (data.warning) {
-                banner.textContent = "⚠️ " + data.warning;
-                banner.classList.add("show");
-              } else {
-                banner.classList.remove("show");
-              }
-
-              const badge = document.getElementById("scanType");
-              badge.textContent = "📸 Macro Trajectory Scan";
-              badge.style.background = "rgba(139,92,246,0.15)";
-              badge.style.color = "#a855f7";
-
-              showResults(data);
-            } catch (err) {
-              loader.classList.remove("show");
-              alert("Optical Scan failed: " + err.message);
-            }
-          });
-        }
-
-        const captureDeepBtn = document.getElementById("captureDeepBtn");
-        if (captureDeepBtn) {
-          captureDeepBtn.addEventListener("click", async () => {
-            if (!capturedBase64) return;
-
-            const res = await fetch(capturedBase64);
-            const blob = await res.blob();
-            const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-
-            const form = new FormData();
-            form.append("image", file);
-            form.append("crop", selectedCrop);
-
-            runScan(
-              "/detect_deep",
-              "Extracting multi-layered transformation nodes…",
-              "Deep YOLO26 Profile",
-              { bg: "rgba(244,63,94,0.15)", cl: "#f43f5e" },
-              form,
-            );
-          });
-        }
+      /* ─── History ─── */
+      function thumb(url, lbl) {
+        if (!url) return `<div class="h-thumb"><span>${esc(lbl)}</span></div>`;
+        return `<div class="h-thumb"><img src="${esc(url)}" alt="${esc(lbl)}"><span>${esc(lbl)}</span></div>`;
       }
 
-      /* ── Live Camera ───────────────────────────── */
-      const startBtn = document.getElementById("startCam");
-      const stopBtn = document.getElementById("stopCam");
-      const camStream = document.getElementById("camStream");
-      const camPlace = document.getElementById("camPlaceholder");
-      const liveDot = document.getElementById("liveDot");
-      const fpsBadge = document.getElementById("fpsBadge");
-      const camSide = document.getElementById("camSidebar");
-      const confSelector = document.getElementById("confSelector");
-      let polling = null,
-        fpsInterval = null,
-        frameCount = 0;
-
-      if (startBtn && stopBtn && camStream && camPlace && liveDot && fpsBadge && camSide && confSelector) {
-        startBtn.addEventListener("click", async () => {
-          await fetch("/start_camera");
-          camStream.src = "/video_feed?" + Date.now();
-          camStream.style.display = "block";
-          camPlace.style.display = "none";
-          liveDot.style.display = "flex";
-          fpsBadge.style.display = "block";
-          confSelector.style.display = "flex";
-          startBtn.style.display = "none";
-          stopBtn.style.display = "inline-flex";
-          document.getElementById("camEmpty").style.display = "none";
-          polling = setInterval(pollDetections, 1000);
-          frameCount = 0;
-          camStream.onload = () => frameCount++;
-          fpsInterval = setInterval(() => {
-            fpsBadge.textContent = frameCount + " FPS";
-            frameCount = 0;
-          }, 1000);
-        });
-
-        stopBtn.addEventListener("click", async () => {
-          await fetch("/stop_camera");
-          camStream.src = "";
-          camStream.style.display = "none";
-          camPlace.style.display = "flex";
-          liveDot.style.display = "none";
-          fpsBadge.style.display = "none";
-          confSelector.style.display = "none";
-          stopBtn.style.display = "none";
-          startBtn.style.display = "inline-flex";
-          clearInterval(polling);
-          clearInterval(fpsInterval);
-          camSide.innerHTML = '<div class="empty-state">Optics link dead.</div>';
-        });
-      }
-
-      document.querySelectorAll(".conf-btn").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          document
-            .querySelectorAll(".conf-btn")
-            .forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          await fetch("/set_confidence/" + btn.dataset.level);
-        });
-      });
-
-      async function pollDetections() {
-        try {
-          const res = await fetch("/detections");
-          const data = await res.json();
-          renderCamCards(data.detections || []);
-        } catch (_) {}
-      }
-
-      function renderCamCards(dets) {
-        if (!dets.length) {
-          camSide.innerHTML = '<div class="empty-state">Parsing tracking grid...</div>';
-          return;
-        }
-        let html = `<div style="font-weight:700;font-size:0.95rem;margin-bottom:8px;display:flex;justify-content:space-between;">
-       <span>Live YOLO26 Mapping</span><span style="font-size:0.75rem;color:var(--txt3);">${dets.length} locked</span></div>`;
-        dets.forEach((d) => {
-          html += buildCardHTML(d, true);
-        });
-        camSide.innerHTML = html;
-      }
-
-      /* ── History ───────────────────────────────── */
       document.getElementById("historyBtn").addEventListener("click", async () => {
         document.getElementById("historyModal").classList.add("show");
         try {
           const s = await (await fetch("/history/stats")).json();
           document.getElementById("statsGrid").innerHTML = `
-        <div class="stat-card"><div class="num">${s.total_detections}</div><div class="label">Total Predictions</div></div>
-        <div class="stat-card"><div class="num">${s.top_pests.length > 0 ? s.top_pests[0].name : "None"}</div><div class="label">Top YOLO26 Label</div></div>
-        <div class="stat-card"><div class="num" style="color:var(--purple)">${s.severity_breakdown.high || 0}</div><div class="label">High Confidence</div></div>`;
-        } catch (_) {}
+            <div class="stat-card"><div class="n">${s.total_detections}</div><div class="l">Predictions</div></div>
+            <div class="stat-card"><div class="n">${s.top_pests.length ? s.top_pests[0].name : "—"}</div><div class="l">Top Label</div></div>
+            <div class="stat-card"><div class="n" style="color:var(--purple,#c084fc)">${s.severity_breakdown.high||0}</div><div class="l">High Conf</div></div>`;
+        } catch(_) {}
         try {
-          const data = await (await fetch("/history")).json();
+          const d = await (await fetch("/history")).json();
           const list = document.getElementById("historyList");
-          if (!data.history.length) {
-            list.innerHTML = '<div style="text-align:center;color:var(--txt3);padding:20px;">Lab log is empty.</div>';
+          if (!d.history.length) {
+            list.innerHTML = '<p style="text-align:center;color:var(--txt3);padding:16px;">No records yet.</p>';
           } else {
-            list.innerHTML = data.history
-              .map(
-                (h) =>
-                  `<article class="history-item">
-                    <div class="history-pair">
-                      ${imageThumb(h.image_url, "Upload")}
-                      ${imageThumb(h.result_url || h.butterfly_image_url, "Predict")}
-                    </div>
-                    <div class="pest-info">
-                      <span class="name">Class ${escapeHtml(h.prediction)}</span>
-                      <span class="date">${escapeHtml(h.timestamp)} · Region: ${escapeHtml(h.crop || "Unknown")}</span>
-                      <span class="date">Uploaded: ${escapeHtml(h.image_path || "")}</span>
-                    </div>
-                    <div class="history-actions">
-                      ${severityBadge(h.severity)}
-                      <div style="font-family:var(--mono);font-size:0.75rem;color:var(--txt2);">${escapeHtml(h.confidence)}% Match</div>
-                    </div>
-                  </article>`,
-              )
-              .join("");
+            list.innerHTML = d.history.map(h => `
+              <div class="h-item">
+                <div class="h-pair">${thumb(h.image_url,"Input")}${thumb(h.result_url||h.butterfly_image_url,"Result")}</div>
+                <div class="h-info">
+                  <span class="name">Class ${esc(h.prediction)}</span>
+                  <span class="date">${esc(h.timestamp)}</span>
+                </div>
+                <div class="h-action">${esc(h.confidence)}%</div>
+              </div>`).join("");
           }
-        } catch (_) {}
+        } catch(_) {}
       });
 
       document.getElementById("closeHistory").addEventListener("click", () =>
-        document.getElementById("historyModal").classList.remove("show"),
+        document.getElementById("historyModal").classList.remove("show")
       );
-      document.getElementById("historyModal").addEventListener("click", (e) => {
+      document.getElementById("historyModal").addEventListener("click", e => {
         if (e.target === e.currentTarget) e.currentTarget.classList.remove("show");
       });
       document.getElementById("clearHistoryBtn").addEventListener("click", async () => {
-        if (confirm("Wipe all locally stored taxonomy logs?")) {
+        if (confirm("Clear all records?")) {
           await fetch("/history/clear", { method: "POST" });
-          document.getElementById("historyList").innerHTML = '<div style="text-align:center;color:var(--txt3);padding:20px;">Logs formatted.</div>';
+          document.getElementById("historyList").innerHTML =
+            '<p style="text-align:center;color:var(--txt3);padding:16px;">Cleared.</p>';
           document.getElementById("statsGrid").innerHTML = "";
         }
       });
